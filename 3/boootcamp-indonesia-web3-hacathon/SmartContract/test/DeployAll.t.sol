@@ -27,7 +27,8 @@ contract DeployAllTest is Test {
         assertTrue(token.isMinter(address(faucet)));
         
         // Pastikan initial supply (500,000) masuk ke deployer
-        address deployerAddr = vm.addr(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80);
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployerAddr = vm.addr(deployerPrivateKey);
         assertEq(token.balanceOf(deployerAddr), 500000 ether);
         
         // Pastikan Max Supply sesuai ketentuan
