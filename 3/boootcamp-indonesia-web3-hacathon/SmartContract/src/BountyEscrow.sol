@@ -9,13 +9,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract BountyEscrow {
     using SafeERC20 for IERC20;
 
-    enum Status {
-        MenungguDana,
-        Dibuka,
-        Disubmit,
-        Selesai,
-        Dibatalkan
-    }
+    enum Status { MenungguDana, Dibuka, Disubmit, Selesai, Dibatalkan }
 
     IERC20 public immutable rewardToken;
     address public immutable creator;
@@ -48,9 +42,7 @@ contract BountyEscrow {
     constructor(IERC20 _rewardToken, uint256 _rewardAmount, string memory _rulesURI, uint256 _submissionDeadline) {
         if (_rewardAmount == 0) revert RewardNol();
         if (bytes(_rulesURI).length == 0) revert AturanKosong();
-        if (_submissionDeadline <= block.timestamp) {
-            revert DeadlineHarusMasaDepan();
-        }
+        if (_submissionDeadline <= block.timestamp) revert DeadlineHarusMasaDepan();
         rewardToken = _rewardToken;
         rewardAmount = _rewardAmount;
         rulesURI = _rulesURI;
@@ -60,9 +52,7 @@ contract BountyEscrow {
     }
 
     function fund() external hanyaCreator {
-        if (status != Status.MenungguDana) {
-            revert StatusSalah(Status.MenungguDana, status);
-        }
+        if (status != Status.MenungguDana) revert StatusSalah(Status.MenungguDana, status);
         status = Status.Dibuka;
         rewardToken.safeTransferFrom(creator, address(this), rewardAmount);
         emit BountyFunded(rewardAmount);
@@ -78,9 +68,7 @@ contract BountyEscrow {
     }
 
     function approveWork() external hanyaCreator {
-        if (status != Status.Disubmit) {
-            revert StatusSalah(Status.Disubmit, status);
-        }
+        if (status != Status.Disubmit) revert StatusSalah(Status.Disubmit, status);
         status = Status.Selesai;
         address recipient = worker;
         rewardToken.safeTransfer(recipient, rewardAmount);
@@ -88,9 +76,7 @@ contract BountyEscrow {
     }
 
     function rejectWork() external hanyaCreator {
-        if (status != Status.Disubmit) {
-            revert StatusSalah(Status.Disubmit, status);
-        }
+        if (status != Status.Disubmit) revert StatusSalah(Status.Disubmit, status);
         address rejectedWorker = worker;
         worker = address(0);
         proofURI = "";

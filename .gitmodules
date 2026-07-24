@@ -1,0 +1,6 @@
+[submodule "3/boootcamp-indonesia-web3-hacathon/SmartContract/lib/openzeppelin-contracts"]
+	path = 3/boootcamp-indonesia-web3-hacathon/SmartContract/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "3/boootcamp-indonesia-web3-hacathon/SmartContract/lib/forge-std"]
+	path = 3/boootcamp-indonesia-web3-hacathon/SmartContract/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
