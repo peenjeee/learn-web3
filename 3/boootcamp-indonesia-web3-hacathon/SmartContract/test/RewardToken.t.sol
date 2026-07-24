@@ -3,201 +3,98 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {RewardToken} from "../src/RewardToken.sol";
-import {BountyEscrow} from "../src/BountyEscrow.sol";
 
-contract BountyEscrowTest is Test {
+contract RewardTokenTest is Test {
     RewardToken token;
-    BountyEscrow escrow;
-
-    address creator = address(0xC0FFEE);
-    address worker = address(0xB0B);
-    address random = address(0xBEEF);
-
-    uint256 rewardAmount = 100 ether;
-    string rulesURI = "https://github.com/devweb3jogja/bounty-1/blob/main/RULES.md";
-    uint256 submissionDeadline;
+    address owner = address(0x111);
+    address minter = address(0x222);
+    address user = address(0x333);
 
     function setUp() public {
-        submissionDeadline = block.timestamp + 7 days;
-        token = new RewardToken(1000 ether, creator);
-        vm.prank(creator);
-        escrow = new BountyEscrow(token, rewardAmount, rulesURI, submissionDeadline);
-        vm.startPrank(creator);
-        token.approve(address(escrow), rewardAmount);
-        escrow.fund();
+        vm.prank(owner);
+        token = new RewardToken(100 ether, owner);
+    }
+
+    function test_Constructor() public view {
+        assertEq(token.owner(), owner);
+        assertEq(token.balanceOf(owner), 100 ether);
+        assertEq(token.totalSupply(), 100 ether);
+    }
+
+    function test_SetMinter() public {
+        vm.prank(owner);
+        token.setMinter(minter, true);
+        assertTrue(token.isMinter(minter));
+    }
+
+    function test_Revert_SetMinterBukanOwner() public {
+        vm.expectRevert(); // OwnableUnauthorizedAccount
+        vm.prank(user);
+        token.setMinter(minter, true);
+    }
+
+    function test_Revert_SetMinterAlamatNol() public {
+        vm.prank(owner);
+        vm.expectRevert(RewardToken.AlamatNol.selector);
+        token.setMinter(address(0), true);
+    }
+
+    function test_MintSukses() public {
+        vm.startPrank(owner);
+        token.setMinter(minter, true);
+        token.mint(user, 50 ether); // Owner can mint directly
         vm.stopPrank();
+
+        vm.prank(minter);
+        token.mint(user, 50 ether); // Minter can also mint
+
+        assertEq(token.balanceOf(user), 100 ether);
     }
 
-    // ---------- SUKSES ----------
-    function test_Constructor_SetSemuaField() public view {
-        assertEq(address(escrow.rewardToken()), address(token));
-        assertEq(escrow.creator(), creator);
-        assertEq(escrow.rewardAmount(), rewardAmount);
-        assertEq(escrow.rulesURI(), rulesURI);
-        assertEq(escrow.submissionDeadline(), submissionDeadline);
+    function test_Revert_MintBukanMinter() public {
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.BukanMinter.selector, user));
+        token.mint(user, 50 ether);
     }
 
-    function test_Fund_KunciHadiah() public view {
-        assertEq(token.balanceOf(address(escrow)), rewardAmount);
-        assertEq(token.balanceOf(creator), 900 ether);
-        assertEq(uint256(escrow.status()), uint256(BountyEscrow.Status.Dibuka));
+    function test_Revert_MintMelebihiMaxSupply() public {
+        vm.prank(owner);
+        token.setMinter(minter, true);
+
+        uint256 sisa = token.MAX_SUPPLY() - token.totalSupply();
+
+        vm.prank(minter);
+        vm.expectRevert(abi.encodeWithSelector(RewardToken.MelebihiMaxSupply.selector, sisa + 1, sisa));
+        token.mint(user, sisa + 1);
     }
 
-    function test_SubmitWork_CatatPengerja() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        assertEq(escrow.worker(), worker);
-        assertEq(escrow.proofURI(), "ipfs://bukti");
-        assertEq(uint256(escrow.status()), uint256(BountyEscrow.Status.Disubmit));
+    function test_Burn() public {
+        vm.startPrank(owner);
+        assertTrue(token.transfer(user, 50 ether));
+        vm.stopPrank();
+
+        vm.prank(user);
+        token.burn(20 ether);
+
+        assertEq(token.balanceOf(user), 30 ether);
     }
 
-    function test_ApproveWork_CairkanHadiah() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        vm.prank(creator);
-        escrow.approveWork();
-        assertEq(token.balanceOf(worker), rewardAmount);
-        assertEq(token.balanceOf(address(escrow)), 0);
-        assertEq(uint256(escrow.status()), uint256(BountyEscrow.Status.Selesai));
+    function test_Revert_BurnMelebihiSaldo() public {
+        vm.prank(owner);
+        assertTrue(token.transfer(user, 50 ether));
+
+        vm.prank(user);
+        vm.expectRevert(); // ERC20InsufficientBalance
+        token.burn(60 ether);
     }
 
-    function test_RejectWork_BalikDibuka() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        vm.prank(creator);
-        escrow.rejectWork();
-        assertEq(escrow.worker(), address(0));
-        assertEq(escrow.proofURI(), "");
-        assertEq(uint256(escrow.status()), uint256(BountyEscrow.Status.Dibuka));
-    }
+    function test_SetMinter_CabutAkses() public {
+        vm.startPrank(owner);
+        token.setMinter(minter, true);
+        assertTrue(token.isMinter(minter));
 
-    function test_RejectWork_LaluBisaSubmitLagi() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://v1");
-        vm.prank(creator);
-        escrow.rejectWork();
-        vm.prank(worker);
-        escrow.submitWork("ipfs://v2");
-        assertEq(escrow.proofURI(), "ipfs://v2");
-        assertEq(uint256(escrow.status()), uint256(BountyEscrow.Status.Disubmit));
-    }
-
-    function test_Cancel_RefundCreator() public {
-        vm.prank(creator);
-        escrow.cancel();
-        assertEq(token.balanceOf(creator), 1000 ether);
-        assertEq(uint256(escrow.status()), uint256(BountyEscrow.Status.Dibatalkan));
-    }
-
-    // ---------- GAGAL: constructor ----------
-    function test_Revert_ConstructorRewardNol() public {
-        vm.expectRevert(BountyEscrow.RewardNol.selector);
-        new BountyEscrow(token, 0, rulesURI, submissionDeadline);
-    }
-
-    function test_Revert_ConstructorAturanKosong() public {
-        vm.expectRevert(BountyEscrow.AturanKosong.selector);
-        new BountyEscrow(token, rewardAmount, "", submissionDeadline);
-    }
-
-    function test_Revert_ConstructorDeadlineLewat() public {
-        vm.expectRevert(BountyEscrow.DeadlineHarusMasaDepan.selector);
-        new BountyEscrow(token, rewardAmount, rulesURI, block.timestamp);
-    }
-
-    // ---------- GAGAL: fund ----------
-    function test_Revert_FundBukanCreator() public {
-        vm.prank(creator);
-        BountyEscrow baru = new BountyEscrow(token, rewardAmount, rulesURI, submissionDeadline);
-        vm.expectRevert(abi.encodeWithSelector(BountyEscrow.BukanCreator.selector, random));
-        vm.prank(random);
-        baru.fund();
-    }
-
-    function test_Revert_FundDobel() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BountyEscrow.StatusSalah.selector, BountyEscrow.Status.MenungguDana, BountyEscrow.Status.Dibuka
-            )
-        );
-        vm.prank(creator);
-        escrow.fund();
-    }
-
-    // ---------- GAGAL: submitWork ----------
-    function test_Revert_SubmitBelumDibuka() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BountyEscrow.StatusSalah.selector, BountyEscrow.Status.Dibuka, BountyEscrow.Status.Disubmit
-            )
-        );
-        vm.prank(random);
-        escrow.submitWork("dobel");
-    }
-
-    function test_Revert_SubmitSetelahDeadline() public {
-        vm.warp(submissionDeadline + 1);
-        vm.prank(worker);
-        vm.expectRevert(BountyEscrow.DeadlineLewat.selector);
-        escrow.submitWork("telat");
-    }
-
-    // ---------- GAGAL: approveWork ----------
-    function test_Revert_ApproveBukanCreator() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        vm.expectRevert(abi.encodeWithSelector(BountyEscrow.BukanCreator.selector, random));
-        vm.prank(random);
-        escrow.approveWork();
-    }
-
-    function test_Revert_ApproveBelumDisubmit() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BountyEscrow.StatusSalah.selector, BountyEscrow.Status.Disubmit, BountyEscrow.Status.Dibuka
-            )
-        );
-        vm.prank(creator);
-        escrow.approveWork();
-    }
-
-    // ---------- GAGAL: rejectWork ----------
-    function test_Revert_RejectBukanCreator() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        vm.expectRevert(abi.encodeWithSelector(BountyEscrow.BukanCreator.selector, random));
-        vm.prank(random);
-        escrow.rejectWork();
-    }
-
-    function test_Revert_RejectBelumDisubmit() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BountyEscrow.StatusSalah.selector, BountyEscrow.Status.Disubmit, BountyEscrow.Status.Dibuka
-            )
-        );
-        vm.prank(creator);
-        escrow.rejectWork();
-    }
-
-    // ---------- GAGAL: cancel ----------
-    function test_Revert_CancelBukanCreator() public {
-        vm.expectRevert(abi.encodeWithSelector(BountyEscrow.BukanCreator.selector, random));
-        vm.prank(random);
-        escrow.cancel();
-    }
-
-    function test_Revert_CancelSetelahDisubmit() public {
-        vm.prank(worker);
-        escrow.submitWork("ipfs://bukti");
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BountyEscrow.StatusSalah.selector, BountyEscrow.Status.Dibuka, BountyEscrow.Status.Disubmit
-            )
-        );
-        vm.prank(creator);
-        escrow.cancel();
+        token.setMinter(minter, false);
+        assertTrue(!token.isMinter(minter));
+        vm.stopPrank();
     }
 }
