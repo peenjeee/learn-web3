@@ -25,6 +25,7 @@ export default function App() {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
         setAccount(accounts[0])
+        setStatus({ type: "", message: "" }) // Bersihkan error jika sukses
       } catch (err) {
         setStatus({ type: "error", message: "Gagal menghubungkan wallet." })
       }
