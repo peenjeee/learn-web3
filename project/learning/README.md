@@ -44,6 +44,27 @@ VITE_BSC_TESTNET_RPC="https://bsc-testnet-rpc.publicnode.com"
 Semua alamat harus berasal dari deployment di BNB Testnet. Jangan pernah
 menaruh private key, password wallet, atau API key di aplikasi frontend.
 
+### Oracle online di Vercel
+
+Tambahkan variabel berikut melalui **Vercel > Project > Settings > Environment
+Variables**. Variabel ini tidak memakai awalan `VITE_`, sehingga hanya dapat
+dibaca oleh Vercel Function:
+
+```env
+BSC_TESTNET_RPC="RPC_BNB_TESTNET"
+BOUNTY_FACTORY="ALAMAT_BOUNTY_FACTORY"
+WALLET_PASSWORD="PASSWORD_WALLET_AGENT"
+WALLET_KEYSTORE_B64="BASE64_FILE_KEYSTORE_AGENT"
+LLM_BASE_URL="https://openrouter.ai/api/v1"
+LLM_API_KEY="API_KEY_OPENROUTER"
+LLM_MODEL="openrouter/free"
+```
+
+Setelah redeploy, frontend memanggil `/api/oracle` setiap kali transaksi
+`submitWork` berhasil. Vercel Function membaca submission, meminta verdict
+OpenRouter, lalu menandatangani `fulfillVerification` memakai keystore agent.
+Wallet agent harus tetap memiliki sedikit tBNB untuk gas.
+
 ## Membuat AI bounty
 
 1. Pastikan wallet memiliki RWD dan tBNB.
@@ -53,7 +74,8 @@ menaruh private key, password wallet, atau API key di aplikasi frontend.
    bounty.
 5. Worker dapat mengirim URL bukti pada kartu bounty yang berstatus **Dibuka**.
 
-AI oracle dijalankan terpisah dari folder `4/pertemuan-4/agent-oracle`.
+Untuk pengembangan lokal tanpa Vercel, AI oracle masih dapat dijalankan dari
+folder `4/pertemuan-4/agent-oracle`.
 
 ## Pemeriksaan
 

@@ -340,9 +340,23 @@ export default function App() {
       const tx = await escrow.submitWork(proof)
       await tx.wait()
       setProofs((current) => ({ ...current, [bounty.address]: '' }))
+
+      const response = await fetch('/api/oracle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ escrow: bounty.address }),
+      })
+      const verdict = await response.json()
+      if (!response.ok) {
+        throw new Error(
+          `Submission tersimpan, tetapi oracle online gagal: ${verdict.error || response.statusText}`,
+        )
+      }
       setNotice({
         type: 'success',
-        message: `Submission bounty #${bounty.id} terkirim dan menunggu AI.`,
+        message: verdict.eligible
+          ? `Bounty #${bounty.id} lolos AI: ${verdict.reason || 'bukti sesuai aturan'}.`
+          : `Bounty #${bounty.id} belum lolos AI: ${verdict.reason || 'bukti belum sesuai aturan'}.`,
       })
       await loadBounties()
     } catch (error) {
