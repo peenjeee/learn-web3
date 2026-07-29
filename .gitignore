@@ -3,3 +3,4 @@ node_modules/
 dist/
 .omx/
 .agents/.env
+/project/bounty-ai-oracle/
