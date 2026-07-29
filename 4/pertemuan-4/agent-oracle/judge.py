@@ -61,7 +61,10 @@ def judge(rules_uri: str, proof_uri: str) -> tuple[bool, str]:
                 },
                 {
                     "role": "user",
-                    "content": f"=== ATURAN ===\n{rules}\n\n=== BUKTI ===\n{proof}",
+                    "content": (
+                        f"=== ATURAN ({rules_uri}) ===\n{rules}\n\n"
+                        f"=== BUKTI ({proof_uri}) ===\n{proof}"
+                    ),
                 },
             ],
         },
@@ -69,4 +72,3 @@ def judge(rules_uri: str, proof_uri: str) -> tuple[bool, str]:
     )
     response.raise_for_status()
     return parse_verdict(response.json()["choices"][0]["message"]["content"])
-
