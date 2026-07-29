@@ -12,7 +12,7 @@ contract CreateBounty is Script {
         BountyFactory factory = BountyFactory(factoryAddr);
 
         uint256 rewardAmount = 100 ether;
-        string memory rulesURI = "https://github.com/devweb3jogja/bounty-1/blob/main/RULES.md";
+        string memory rulesURI = "https://github.com/peenjeee/learn-web3/blob/main/4/pertemuan-4/RULES.md";
         uint256 submissionDeadline = block.timestamp + 7 days;
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));

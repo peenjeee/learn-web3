@@ -1,0 +1,11 @@
+[project]
+name = "bounty-oracle"
+
+[network]
+default = "bsc-testnet"
+
+[wallet]
+kind = "evm-local"
+keystore_dir = ".studio/wallets"
+address = "0xcd27B12a3552a6f2D2a3829425fA60a1535c5bA7"
+
