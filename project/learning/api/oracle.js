@@ -18,7 +18,9 @@ function json(data, status = 200) {
 }
 
 function normalizeUrl(value) {
-  const url = new URL(value)
+  const url = new URL(
+    /^https?:\/\//i.test(value) ? value : `https://${value}`,
+  )
   if (url.protocol !== 'https:') {
     throw new Error('Aturan dan bukti harus memakai URL HTTPS publik.')
   }
@@ -197,8 +199,12 @@ export async function POST(request) {
 
 if (globalThis.process?.argv?.includes('--self-test')) {
   const verdict = parseVerdict('{"eligible":true,"reason":"sesuai"}')
-  if (!verdict.eligible || verdict.reason !== 'sesuai') {
-    throw new Error('Self-test parseVerdict gagal.')
+  if (
+    !verdict.eligible ||
+    verdict.reason !== 'sesuai' ||
+    normalizeUrl('example.com') !== 'https://example.com/'
+  ) {
+    throw new Error('Oracle self-test gagal.')
   }
   console.log('oracle self-test passed')
 }
