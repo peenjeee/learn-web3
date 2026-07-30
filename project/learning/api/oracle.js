@@ -72,11 +72,17 @@ async function fetchText(value) {
 
 function parseVerdict(content) {
   const verdict = JSON.parse(content)
-  if (typeof verdict.eligible !== 'boolean') {
+  const eligible =
+    typeof verdict.eligible === 'boolean'
+      ? verdict.eligible
+      : { true: true, false: false }[
+          String(verdict.eligible).trim().toLowerCase()
+        ]
+  if (typeof eligible !== 'boolean') {
     throw new Error('LLM tidak mengembalikan eligible berupa boolean.')
   }
   return {
-    eligible: verdict.eligible,
+    eligible,
     reason: String(verdict.reason || '').trim(),
   }
 }
@@ -199,9 +205,11 @@ export async function POST(request) {
 
 if (globalThis.process?.argv?.includes('--self-test')) {
   const verdict = parseVerdict('{"eligible":true,"reason":"sesuai"}')
+  const stringVerdict = parseVerdict('{"eligible":"false","reason":"kurang"}')
   if (
     !verdict.eligible ||
     verdict.reason !== 'sesuai' ||
+    stringVerdict.eligible ||
     normalizeUrl('example.com') !== 'https://example.com/'
   ) {
     throw new Error('Oracle self-test gagal.')
