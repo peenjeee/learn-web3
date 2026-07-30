@@ -322,6 +322,37 @@ export default function App() {
     }
   }
 
+  const runOracle = async (bounty) => {
+    const response = await fetch('/api/oracle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ escrow: bounty.address }),
+    })
+    const verdict = await response.json()
+    if (!response.ok) {
+      throw new Error(`Oracle online gagal: ${verdict.error || response.statusText}`)
+    }
+    setNotice({
+      type: 'success',
+      message: verdict.eligible
+        ? `Bounty #${bounty.id} lolos AI: ${verdict.reason || 'bukti sesuai aturan'}.`
+        : `Bounty #${bounty.id} belum lolos AI: ${verdict.reason || 'bukti belum sesuai aturan'}.`,
+    })
+    await loadBounties()
+  }
+
+  const retryOracle = async (bounty) => {
+    setBusy(`oracle-${bounty.address}`)
+    setNotice({ type: '', message: '' })
+    try {
+      await runOracle(bounty)
+    } catch (error) {
+      setNotice({ type: 'error', message: errorMessage(error) })
+    } finally {
+      setBusy('')
+    }
+  }
+
   const submitProof = async (bounty) => {
     const proof = proofs[bounty.address]?.trim()
     if (!safeHttpUrl(proof)) {
@@ -341,24 +372,13 @@ export default function App() {
       await tx.wait()
       setProofs((current) => ({ ...current, [bounty.address]: '' }))
 
-      const response = await fetch('/api/oracle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ escrow: bounty.address }),
-      })
-      const verdict = await response.json()
-      if (!response.ok) {
+      try {
+        await runOracle(bounty)
+      } catch (error) {
         throw new Error(
-          `Submission tersimpan, tetapi oracle online gagal: ${verdict.error || response.statusText}`,
+          `Submission tersimpan, tetapi ${error.message || 'oracle online gagal.'}`,
         )
       }
-      setNotice({
-        type: 'success',
-        message: verdict.eligible
-          ? `Bounty #${bounty.id} lolos AI: ${verdict.reason || 'bukti sesuai aturan'}.`
-          : `Bounty #${bounty.id} belum lolos AI: ${verdict.reason || 'bukti belum sesuai aturan'}.`,
-      })
-      await loadBounties()
     } catch (error) {
       setNotice({ type: 'error', message: errorMessage(error) })
     } finally {
@@ -820,10 +840,27 @@ export default function App() {
                         )}
 
                         {bounty.status === 2 && (
-                          <div className="mt-5 flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                             <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                            Submission dari {shortAddress(bounty.worker)} sedang
-                            dinilai AI oracle.
+                            <span className="min-w-48 flex-1">
+                              Submission dari {shortAddress(bounty.worker)} sedang
+                              dinilai AI oracle.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => retryOracle(bounty)}
+                              disabled={
+                                busy === `oracle-${bounty.address}`
+                              }
+                              className="ui-button h-9 px-3"
+                            >
+                              {busy === `oracle-${bounty.address}` ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                              Coba lagi
+                            </button>
                           </div>
                         )}
 
